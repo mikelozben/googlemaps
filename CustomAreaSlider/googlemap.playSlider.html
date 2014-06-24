@@ -1,0 +1,213 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Google Map Test</title>
+    <script src="http://maps.googleapis.com/maps/api/js?sensor=false&libraries=visualization&libraries=drawing"></script>
+    <script src="http://www.google.com/jsapi"></script>
+    
+    <style type="text/css">
+        html { height: 100% }
+        body { height: 100%; margin: 0; padding: 0 }
+        #map_canvas { height: 100% }
+        
+        #splitMenuNavDiv{
+            position:absolute; 
+            width:200px; 
+            height:20px; 
+            top:80px; 
+            left:100px; 
+            text-align: center;
+            border-top:1px solid black;
+            border-left:1px solid black;
+            border-right:1px solid black;
+            cursor:pointer;
+        }
+        #splitMenuContainerDiv {
+            position:absolute; 
+            width:200px; 
+            height:400px; 
+            top:100px; 
+            left:100px; 
+            border:1px solid black;            
+        }
+        .splitMenuElDiv {
+            width:180px; 
+            height:23px; 
+            margin-left:10px; 
+            margin-top:10px; 
+            text-align: center;
+            cursor:pointer;
+            /*border:1px solid black;*/
+        }
+        .splitMenuElAddNew {
+            width:180px; 
+            height:23px; 
+            margin-left:10px; 
+            margin-top:10px; 
+            text-align: center;
+            cursor:pointer;
+            /*border:1px solid black;*/
+        }
+    </style>
+    
+    <script type="text/javascript">
+        var mapOptions, map, drawingManager, blnEditMode, currOverlay = null, 
+                sliderOverlays = [],
+                sliderDelay = 1000;
+        
+        document.addEventListener(
+            "DOMContentLoaded",
+            function(event) {
+                mapOptions = {
+                    center: new google.maps.LatLng(54.8404697, 83.1059032),
+                    zoom: 14,
+                    mapTypeId: google.maps.MapTypeId.ROADMAP
+                };
+                map = new google.maps.Map(document.getElementById("map_canvas"),
+                    mapOptions);
+                    
+                drawingManager = new google.maps.drawing.DrawingManager({
+                    drawingMode: google.maps.drawing.OverlayType.POLYGON,
+                    drawingControl: false,
+                    drawingControlOptions: {
+                        position: google.maps.ControlPosition.TOP_CENTER,
+                        drawingModes: [google.maps.drawing.OverlayType.POLYGON]
+                    },
+                    /*
+                    markerOptions: {
+                        icon: new google.maps.MarkerImage('http://www.example.com/icon.png')
+                    },
+                    circleOptions: {
+                        fillColor: '#ffff00',
+                        fillOpacity: 1,
+                        strokeWeight: 5,
+                        clickable: false,
+                        zIndex: 1,
+                        editable: true
+                    }
+                    */
+                });
+                
+                blnEditMode = false;
+                
+                google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
+                    if (event.type === google.maps.drawing.OverlayType.POLYGON) {
+                        currOverlay = event.overlay;
+                        
+                        var path = currOverlay.getPath(), points = path.getArray(), latlangs = [];
+                        for( var i = 0; i < points.length; i++ ) {
+                            latlangs.push([points[i].lat(), points[i].lng()]);
+                        }
+                        
+                        var newSplitMenu = document.createElement('div'), 
+                            splitMenuAddEl = document.getElementsByClassName('splitMenuElAddNew')[0], 
+                            splitMenuContainer = document.getElementById('splitMenuContainerDiv');
+                            
+                        newSplitMenu.classList.add('splitMenuElDiv');
+                        newSplitMenu.latlangs = latlangs;
+                        newSplitMenu.overlay = currOverlay;
+                        newSplitMenu.innerHTML = 'Element';
+                        
+                        splitMenuContainer.insertBefore(newSplitMenu, splitMenuAddEl);
+                        
+                        blnEditMode = false;
+                        currOverlay.setMap(null);
+                        drawingManager.setMap(null);
+                    }
+                });
+                
+                document.getElementsByClassName('splitMenuElAddNew')[0].addEventListener(
+                    'click',
+                    function(event) {
+                        if ( false === blnEditMode ) {
+                            drawingManager.setMap(map);
+                            blnEditMode = true;
+                        }
+                        /*
+                        else {
+                            drawingManager.setOptions({
+                                drawingControl: false
+                            });
+                        }
+                        blnEditMode = !blnEditMode;
+                        */
+                    },
+                    false
+                );
+                
+                document.getElementById('splitMenuContainerDiv').addEventListener(
+                    'mouseover',
+                    function(e) {
+                        var menuCtl = e.target;
+                        if ( menuCtl.classList.contains('splitMenuElDiv') ) {
+                            menuCtl.overlay.setMap(map);
+                        }
+                    },
+                    false
+                );
+
+                document.getElementById('splitMenuContainerDiv').addEventListener(
+                    'mouseout',
+                    function(e) {
+                        var menuCtl = e.target;
+                        if ( menuCtl.classList.contains('splitMenuElDiv') ) {
+                            menuCtl.overlay.setMap(null);
+                        }
+                    },
+                    false
+                );
+                
+                document.getElementById('splitMenuNavDiv').addEventListener(
+                    'click',
+                    function(e) {
+                        var menuContainer = document.getElementById('splitMenuContainerDiv');
+                        sliderOverlays = [];
+                    
+                        for( var i=0; i<menuContainer.childNodes.length; i++ ) {
+                            var el = menuContainer.childNodes[i];
+                            
+                            if ( 'undefined' !== typeof(el.overlay) ) {
+                                sliderOverlays.push(el.overlay);
+                            }
+                        }
+                        
+                        console.log(' overlays : ', sliderOverlays);
+                        playSlider(0);
+                    },
+                    false
+                );
+
+            },
+            false
+        );
+        
+        function playSlider(i) {
+            if ( (i >= 0) && (i < sliderOverlays.length) ) {
+                if ( i > 0 ) {
+                    sliderOverlays[i-1].setMap(null);
+                }
+                sliderOverlays[i].setMap(map);
+                setTimeout(function() {playSlider(i+1);}, sliderDelay);
+            }
+            else {
+                sliderOverlays[i-1].setMap(null);
+                sliderOverlays = [];
+            }
+        }
+    </script>
+    
+</head>
+
+<body>
+    <div id='map_canvas' style='width:100%; height:100%'></div>
+    <div id='splitMenuNavDiv'>
+        <span>Play</span>
+    </div>
+    <div id='splitMenuContainerDiv'>
+        <div class='splitMenuElAddNew'>Add New</div>
+    </div>
+</body>
+</html>
